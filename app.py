@@ -10,23 +10,6 @@ st.set_page_config(page_title="Treasure Hunt", page_icon="🗝️", layout="cent
 # =================================================
 # CONFIGURATION
 # =================================================
-# This version is deployment-ready for Streamlit Community Cloud.
-# It uses Google Sheets as the backend so data persists for all users.
-#
-# SHEETS REQUIRED:
-# 1. users
-# 2. clue_1_pool
-# 3. clue_2_pool
-# 4. clue_3_pool
-#
-# users sheet columns:
-# username, clue_1, clue_2, clue_3, unlocked_clue_1, unlocked_clue_2,
-# unlocked_clue_3, unlocked_final_clue, eliminated
-#
-# clue pool sheet columns:
-# clue_text, assigned_to
-# =================================================
-
 APP_TITLE = "🗝️ Treasure Hunt App"
 FINAL_CLUE_TEXT = "Final clue: The treasure rests where every match begins, but never stays for long."
 
@@ -124,11 +107,6 @@ def bool_to_str(value: bool) -> str:
     return "TRUE" if value else "FALSE"
 
 
-def get_all_users() -> List[Dict[str, str]]:
-    ws = get_worksheet(USERS_SHEET)
-    return ws.get_all_records()
-
-
 def find_user_row(username: str) -> Tuple[Optional[int], Optional[Dict[str, str]]]:
     ws = get_worksheet(USERS_SHEET)
     records = ws.get_all_records()
@@ -191,11 +169,6 @@ def set_eliminated(username: str, eliminated: bool = True):
 # =================================================
 # CLUE POOL HELPERS
 # =================================================
-def get_pool_records(clue_key: str) -> List[Dict[str, str]]:
-    ws = get_worksheet(POOL_SHEETS[clue_key])
-    return ws.get_all_records()
-
-
 def assign_unique_clue(username: str, clue_key: str) -> Optional[str]:
     ws = get_worksheet(POOL_SHEETS[clue_key])
     records = ws.get_all_records()
@@ -385,7 +358,7 @@ def reset_everything():
     ws.clear()
     ws.append_row(USERS_HEADERS)
 
-    for clue_key, sheet_name in POOL_SHEETS.items():
+    for _, sheet_name in POOL_SHEETS.items():
         pool_ws = get_worksheet(sheet_name)
         existing = pool_ws.get_all_records()
         clue_texts = [str(row.get("clue_text", "")).strip() for row in existing if str(row.get("clue_text", "")).strip()]
@@ -437,41 +410,3 @@ st.markdown("---")
 st.caption(
     "Expected pool sizes for your format: 7 clues in clue_1_pool, 6 in clue_2_pool, 5 in clue_3_pool, and one shared final clue inside the app."
 )
-
-# =================================================
-# SETUP NOTES
-# =================================================
-# Create these Google Sheets tabs exactly:
-# - users
-# - clue_1_pool
-# - clue_2_pool
-# - clue_3_pool
-#
-# Put these clue texts into the clue pool sheets under the clue_text column.
-# Leave assigned_to blank.
-#
-# clue_1_pool should contain 7 rows
-# clue_2_pool should contain 6 rows
-# clue_3_pool should contain 5 rows
-#
-# Streamlit secrets format:
-# [app]
-# spreadsheet_name = "YOUR_GOOGLE_SHEET_NAME"
-# admin_password = "YOUR_ADMIN_PASSWORD"
-#
-# [gcp_service_account]
-# type = "service_account"
-# project_id = "..."
-# private_key_id = "..."
-# private_key = "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-# client_email = "..."
-# client_id = "..."
-# auth_uri = "https://accounts.google.com/o/oauth2/auth"
-# token_uri = "https://oauth2.googleapis.com/token"
-# auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
-# client_x509_cert_url = "..."
-#
-# requirements.txt:
-# streamlit
-# gspread
-# google-auth
