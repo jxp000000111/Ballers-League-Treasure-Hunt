@@ -1,412 +1,358 @@
-import random
-from typing import Dict, List, Optional, Tuple
-
-import gspread
 import streamlit as st
-from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Treasure Hunt", page_icon="🗝️", layout="centered")
 
-# =================================================
-# CONFIGURATION
-# =================================================
-APP_TITLE = "🗝️ Treasure Hunt App"
-FINAL_CLUE_TEXT = "Final clue: The treasure rests where every match begins, but never stays for long."
-
-PINS = {
-    "clue_2": "4821",
-    "clue_3": "7354",
-    "final_clue": "9167",
-}
-
-USERS_SHEET = "users"
-POOL_SHEETS = {
-    "clue_1": "clue_1_pool",
-    "clue_2": "clue_2_pool",
-    "clue_3": "clue_3_pool",
-}
-
-USERS_HEADERS = [
-    "username",
-    "clue_1",
-    "clue_2",
-    "clue_3",
-    "unlocked_clue_1",
-    "unlocked_clue_2",
-    "unlocked_clue_3",
-    "unlocked_final_clue",
-    "eliminated",
+TEAM_NAMES = [
+    "Amigos FC",
+    "Men in Black FC",
+    "Timeless Titans",
+    "Galacticos 7",
+    "Red Devilz",
+    "Beast FC",
+    "Blue Lock",
 ]
 
-POOL_HEADERS = ["clue_text", "assigned_to"]
-
-
-# =================================================
-# GOOGLE SHEETS CONNECTION
-# =================================================
-@st.cache_resource
-def get_gspread_client():
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive",
-    ]
-
-    credentials_info = {
-        "type": st.secrets["gcp_service_account"]["type"],
-        "project_id": st.secrets["gcp_service_account"]["project_id"],
-        "private_key_id": st.secrets["gcp_service_account"]["private_key_id"],
-        "private_key": st.secrets["gcp_service_account"]["private_key"],
-        "client_email": st.secrets["gcp_service_account"]["client_email"],
-        "client_id": st.secrets["gcp_service_account"]["client_id"],
-        "auth_uri": st.secrets["gcp_service_account"]["auth_uri"],
-        "token_uri": st.secrets["gcp_service_account"]["token_uri"],
-        "auth_provider_x509_cert_url": st.secrets["gcp_service_account"]["auth_provider_x509_cert_url"],
-        "client_x509_cert_url": st.secrets["gcp_service_account"]["client_x509_cert_url"],
-    }
-
-    creds = Credentials.from_service_account_info(credentials_info, scopes=scopes)
-    return gspread.authorize(creds)
-
-
-@st.cache_resource
-def get_spreadsheet():
-    client = get_gspread_client()
-    spreadsheet_name = st.secrets["app"]["spreadsheet_name"]
-    return client.open(spreadsheet_name)
-
-
-def get_worksheet(sheet_name: str):
-    return get_spreadsheet().worksheet(sheet_name)
-
-
-# =================================================
-# SHEET INITIALIZATION
-# =================================================
-def ensure_sheet_headers(sheet_name: str, headers: List[str]):
-    ws = get_worksheet(sheet_name)
-    first_row = ws.row_values(1)
-    if first_row != headers:
-        ws.clear()
-        ws.append_row(headers)
-
-
-def initialize_sheets():
-    ensure_sheet_headers(USERS_SHEET, USERS_HEADERS)
-    for pool_sheet in POOL_SHEETS.values():
-        ensure_sheet_headers(pool_sheet, POOL_HEADERS)
-
-
-# =================================================
-# DATA HELPERS
-# =================================================
-def str_to_bool(value: str) -> bool:
-    return str(value).strip().lower() == "true"
-
-
-def bool_to_str(value: bool) -> str:
-    return "TRUE" if value else "FALSE"
-
-
-def find_user_row(username: str) -> Tuple[Optional[int], Optional[Dict[str, str]]]:
-    ws = get_worksheet(USERS_SHEET)
-    records = ws.get_all_records()
-    for index, row in enumerate(records, start=2):
-        if str(row.get("username", "")).strip().lower() == username.strip().lower():
-            return index, row
-    return None, None
-
-
-def create_user_if_needed(username: str):
-    row_index, _ = find_user_row(username)
-    if row_index is not None:
-        return
-
-    ws = get_worksheet(USERS_SHEET)
-    ws.append_row(
-        [
-            username,
-            "",
-            "",
-            "",
-            "FALSE",
-            "FALSE",
-            "FALSE",
-            "FALSE",
-            "FALSE",
-        ]
-    )
-
-
-def update_user_field(username: str, column_name: str, value: str):
-    ws = get_worksheet(USERS_SHEET)
-    row_index, _ = find_user_row(username)
-    if row_index is None:
-        return
-
-    column_index = USERS_HEADERS.index(column_name) + 1
-    ws.update_cell(row_index, column_index, value)
-
-
-def get_user(username: str) -> Optional[Dict[str, str]]:
-    _, row = find_user_row(username)
-    return row
-
-
-def set_unlocked(username: str, clue_key: str):
-    column_map = {
-        "clue_1": "unlocked_clue_1",
-        "clue_2": "unlocked_clue_2",
-        "clue_3": "unlocked_clue_3",
-        "final_clue": "unlocked_final_clue",
-    }
-    update_user_field(username, column_map[clue_key], "TRUE")
-
-
-def set_eliminated(username: str, eliminated: bool = True):
-    update_user_field(username, "eliminated", bool_to_str(eliminated))
-
-
-# =================================================
-# CLUE POOL HELPERS
-# =================================================
-def assign_unique_clue(username: str, clue_key: str) -> Optional[str]:
-    ws = get_worksheet(POOL_SHEETS[clue_key])
-    records = ws.get_all_records()
-
-    available_rows = []
-    for idx, row in enumerate(records, start=2):
-        assigned_to = str(row.get("assigned_to", "")).strip()
-        clue_text = str(row.get("clue_text", "")).strip()
-        if clue_text and not assigned_to:
-            available_rows.append((idx, clue_text))
-
-    if not available_rows:
-        return None
-
-    chosen_row, chosen_clue = random.choice(available_rows)
-    ws.update_cell(chosen_row, 2, username)
-    update_user_field(username, clue_key, chosen_clue)
-    return chosen_clue
-
-
-# =================================================
-# APP LOGIC
-# =================================================
-def verify_pin(clue_key: str, entered_pin: str) -> bool:
-    return entered_pin == PINS[clue_key]
-
-
-def select_clue(clue_key: str):
-    st.session_state.selected_clue = clue_key
-
-
-def show_login():
-    st.subheader("Enter your team name")
-    username = st.text_input("Team Name", placeholder="Example: Eagles FC")
-
-    if st.button("Start Hunt", use_container_width=True):
-        cleaned = username.strip()
-        if not cleaned:
-            st.error("Please enter a valid team name.")
-            return
-
-        create_user_if_needed(cleaned)
-
-        # Every team gets Clue 1 immediately. There are 7 rows available in clue_1_pool.
-        user = get_user(cleaned)
-        existing_clue_1 = str(user.get("clue_1", "")).strip() if user else ""
-        if not existing_clue_1:
-            assigned = assign_unique_clue(cleaned, "clue_1")
-            if not assigned:
-                set_eliminated(cleaned, True)
-                st.error("No Clue 1 is available. This team joined too late.")
-                return
-
-        st.session_state.active_user = cleaned
-        st.success(f"Welcome, {cleaned}!")
-
-
-def show_clue_buttons():
-    st.subheader("Choose a clue")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Clue 1", use_container_width=True):
-            select_clue("clue_1")
-    with col2:
-        if st.button("Clue 2", use_container_width=True):
-            select_clue("clue_2")
-
-    col3, col4 = st.columns(2)
-    with col3:
-        if st.button("Clue 3", use_container_width=True):
-            select_clue("clue_3")
-    with col4:
-        if st.button("Final Clue", use_container_width=True):
-            select_clue("final_clue")
-
-
-def show_selected_clue():
-    username = st.session_state.get("active_user", "")
-    clue_key = st.session_state.get("selected_clue")
-
-    if not username or not clue_key:
-        return
-
-    user = get_user(username)
-    if not user:
-        st.error("User record not found.")
-        return
-
-    eliminated = str_to_bool(user.get("eliminated", "FALSE"))
-    clue_1_text = str(user.get("clue_1", "")).strip()
-    clue_2_text = str(user.get("clue_2", "")).strip()
-    clue_3_text = str(user.get("clue_3", "")).strip()
-
-    unlocked_1 = str_to_bool(user.get("unlocked_clue_1", "FALSE"))
-    unlocked_2 = str_to_bool(user.get("unlocked_clue_2", "FALSE"))
-    unlocked_3 = str_to_bool(user.get("unlocked_clue_3", "FALSE"))
-    unlocked_final = str_to_bool(user.get("unlocked_final_clue", "FALSE"))
-
-    title_map = {
-        "clue_1": "Clue 1",
-        "clue_2": "Clue 2",
-        "clue_3": "Clue 3",
-        "final_clue": "Final Clue",
-    }
-
-    st.markdown("---")
-    st.subheader(title_map[clue_key])
-
-    if eliminated:
-        st.error("This team has been eliminated.")
-        return
-
-    if clue_key == "clue_2" and not unlocked_1:
-        st.warning("You must unlock Clue 1 first.")
-        return
-    if clue_key == "clue_3" and not unlocked_2:
-        st.warning("You must unlock Clue 2 first.")
-        return
-    if clue_key == "final_clue" and not unlocked_3:
-        st.warning("You must unlock Clue 3 first.")
-        return
-
-    if clue_key == "clue_1":
-        set_unlocked(username, "clue_1")
-        st.success("Unlocked successfully.")
-        st.info(clue_1_text)
-        return
-
-    if clue_key == "clue_2" and unlocked_2:
-        st.success("PIN verified.")
-        st.info(clue_2_text)
-        return
-    if clue_key == "clue_3" and unlocked_3:
-        st.success("PIN verified.")
-        st.info(clue_3_text)
-        return
-    if clue_key == "final_clue" and unlocked_final:
-        st.success("PIN verified.")
-        st.info(FINAL_CLUE_TEXT)
-        return
-
-    entered_pin = st.text_input(
-        "Enter the 4-digit PIN",
-        max_chars=4,
-        type="password",
-        key=f"pin_{clue_key}",
-        placeholder="Enter PIN",
-    )
-
-    if st.button("Unlock Clue", use_container_width=True):
-        if not entered_pin.isdigit() or len(entered_pin) != 4:
-            st.error("Please enter a valid 4-digit PIN.")
-            return
-
-        if not verify_pin(clue_key, entered_pin):
-            st.error("Incorrect PIN. Try again.")
-            return
-
-        if clue_key == "clue_2" and not clue_2_text:
-            clue_2_text = assign_unique_clue(username, "clue_2")
-            if not clue_2_text:
-                set_eliminated(username, True)
-                st.error("No Clue 2 is available. This team reached too late and is eliminated.")
-                return
-
-        if clue_key == "clue_3" and not clue_3_text:
-            clue_3_text = assign_unique_clue(username, "clue_3")
-            if not clue_3_text:
-                set_eliminated(username, True)
-                st.error("No Clue 3 is available. This team reached too late and is eliminated.")
-                return
-
-        set_unlocked(username, clue_key)
-        st.success("Correct PIN. Clue unlocked!")
-
-        if clue_key == "clue_2":
-            st.info(clue_2_text)
-        elif clue_key == "clue_3":
-            st.info(clue_3_text)
-        elif clue_key == "final_clue":
-            st.info(FINAL_CLUE_TEXT)
-
-
-def reset_everything():
-    ws = get_worksheet(USERS_SHEET)
-    ws.clear()
-    ws.append_row(USERS_HEADERS)
-
-    for _, sheet_name in POOL_SHEETS.items():
-        pool_ws = get_worksheet(sheet_name)
-        existing = pool_ws.get_all_records()
-        clue_texts = [str(row.get("clue_text", "")).strip() for row in existing if str(row.get("clue_text", "")).strip()]
-
-        pool_ws.clear()
-        pool_ws.append_row(POOL_HEADERS)
-        for clue_text in clue_texts:
-            pool_ws.append_row([clue_text, ""])
-
-
-# =================================================
-# UI
-# =================================================
-initialize_sheets()
-
-if "active_user" not in st.session_state:
-    st.session_state.active_user = ""
-if "selected_clue" not in st.session_state:
-    st.session_state.selected_clue = None
-
-st.title(APP_TITLE)
-st.write(
-    "This public version uses Google Sheets as the backend. Teams get unique clues for Clue 1, Clue 2, and Clue 3. The final clue is common for all who reach it."
-)
+ROUTE_ASSIGNMENT = {'Amigos FC': 'Route 4', 'Men in Black FC': 'Route 2', 'Timeless Titans': 'Route 7', 'Galacticos 7': 'Route 1', 'Red Devilz': 'Route 5', 'Beast FC': 'Route 3', 'Blue Lock': 'Route 6'}
+
+ROUTE_DATA = {
+    "Route 1": {
+        "clue_1": {
+            "title": "Clue 2 – Bench",
+            "text": """Heroes of the second half enter from here,
+With restless legs and an Ole-like impact.
+Not quite the battle, not quite the cheer,
+Super-sub comes from here to not keep the warmth intact.""",
+            "code": "4817",
+        },
+        "clue_2": {
+            "title": "Clue 8 – Wooden chairs",
+            "text": """Compared to the rusts and grounds we sit on,
+These are some fine upgraded furniture,
+Tiptoed on the kitchen, they get to have this rest on,
+but unlucky us ballers cant use this for our venture.""",
+            "code": "6713",
+        },
+        "clue_3": {
+            "title": "Clue 23 – Gate of the apartment",
+            "text": """The balls, when shot have seen no boundary,
+They fly off high at a missed shot on goal!
+They either end up at the roads and debris,
+or if we're unlucky, they end up in a flat""",
+            "code": "8617",
+        },
+        "clue_4": {
+            "title": "Clue 13 – Bibs cupboard",
+            "text": """We're all ballers on the pitch alike!
+Positions can only make us change unlike.
+How to differ ourselves when teams are of same colours,
+So take this and distinguish the borders that are very similar.""",
+            "code": "5347",
+        },
+    },
+    "Route 2": {
+        "clue_1": {
+            "title": "Clue 3 – Back black gate",
+            "text": """The place where you use a lighter,
+and the pressure feels a bit lighter.
+Mood for a puff is quenched at this spot.
+Anywhere else and the vigilance is a bit too hot.""",
+            "code": "2639",
+        },
+        "clue_2": {
+            "title": "Clue 9 – Power grid",
+            "text": """The unseen grid on our pitch, it's surprising.
+Do they know of it's SHOCKING existence? - zilch.
+You walk past the grey many times, it's there standing.
+Shining lights on our pitch with the turn of a switch.""",
+            "code": "4582",
+        },
+        "clue_3": {
+            "title": "Clue 20 – Bathroom",
+            "text": """Found in the whole wide world, not just this turf.
+You gotta see the door before you come in, Sherbert.
+Again, make sure you go in the right door enough,
+Or else the world will call you a per-""",
+            "code": "3049",
+        },
+        "clue_4": {
+            "title": "Clue 1 – Center line far from turf",
+            "text": """No crowd sits here, no net is near,
+Yet all games start perpendicularly from here.
+A perfect spot from where the whole turf is seen,
+It’s the place where vision’s more and invention’s mere.""",
+            "code": "1784",
+        },
+    },
+    "Route 3": {
+        "clue_1": {
+            "title": "Clue 4 – Recording station",
+            "text": """Seeing yourself from a different angle and accord,
+Sometimes it's there, sometimes it's not.
+You just pray on a day when its on a proper record,
+That you get to score a banger that's hot.""",
+            "code": "7154",
+        },
+        "clue_2": {
+            "title": "Clue 6 – Bike parking",
+            "text": """These hotheads carry us from our houses,
+And take us to our home away from home!
+These are the only thing that comes to our clutches,
+Just like our defences, we get to park it on.""",
+            "code": "1936",
+        },
+        "clue_3": {
+            "title": "Clue 17 – Kadak",
+            "text": """There are many dhurandhars among us,
+One such friendly dhurandhar helps us to fetch ball,
+And give water, such a helpful lad he is.
+Go and ask him 'Darling Darling dil kyun toda?!'""",
+            "code": "6425",
+        },
+        "clue_4": {
+            "title": "Clue 16 – Car parking",
+            "text": """All the wagons take a rest here uptight,
+Keeping your seats and boots intact.
+Hope the Korean stardust caught up just right,
+The beast’s rear might just have your redact.""",
+            "code": "6921",
+        },
+    },
+    "Route 4": {
+        "clue_1": {
+            "title": "Clue 5 – Pickleball net",
+            "text": """The neighbours of our sport, you see em all the time.
+Don't know if you watch the sport or the chicks!
+Feels like an illegit kid of a game of all time,
+But the net feels just as low as there's just bricks.""",
+            "code": "5928",
+        },
+        "clue_2": {
+            "title": "Clue 11 – Gates",
+            "text": """All the noises of the outer worlds calm,
+when you enter through this portal.
+Make sure you lock it on your way in to alarm,
+Not let a rollin ball go out in total.""",
+            "code": "7408",
+        },
+        "clue_3": {
+            "title": "Clue 18 – Posts",
+            "text": """You hit me on my head, its a challenge!
+But then you get pissed when you hit my arms!
+Players hate me, goalkeepers pray to my avenge,
+You'll have to come inside me to win it in a calm.""",
+            "code": "9173",
+        },
+        "clue_4": {
+            "title": "Clue 21 – Ball shed",
+            "text": """I'm filled with something you need only 1 to play.
+Say that you want one from me and they deny it.
+Only the Academy uses the tools that are in me,
+but the hoops and cones crave for the desperate.""",
+            "code": "4075",
+        },
+    },
+    "Route 5": {
+        "clue_1": {
+            "title": "Clue 10 – Water fridge",
+            "text": """Your thirst find no boundaries here.
+You give a call to Resi and get a flagon.
+The price to pay for a cooler is mere.
+Gonna open, grab one and drink it, then we keep on ballin""",
+            "code": "3461",
+        },
+        "clue_2": {
+            "title": "Clue 12 – Entry board",
+            "text": """We've known this arena and app for years,
+We've called out its name a million times!
+Yet for the newcomers to come in and make cheers;
+They hoarded the arenas to recognize the good times!""",
+            "code": "5284",
+        },
+        "clue_3": {
+            "title": "Clue 19 – Small goal posts",
+            "text": """You play with my elder brothers, but not with me.
+They get to stand tall and wide on both ends to take.
+I'm just one of the younger ones, a bit skinny and short,
+Others would warn you to not hit on me even by mistake :(""",
+            "code": "2856",
+        },
+        "clue_4": {
+            "title": "Clue 14 – Final / divider net",
+            "text": """Hit me when I'm white, I count it a goal!
+Hit me when I'm black, It's off-target.
+But Hit me when I'm Green and the pitch goes split!
+I've got the code in my GREEN form, where am I?""",
+            "code": "9538",
+        },
+    },
+    "Route 6": {
+        "clue_1": {
+            "title": "Clue 7 – Gate of the apartment",
+            "text": """The balls, when shot have seen no boundary,
+They fly off high at a missed shot on goal!
+They either end up at the roads and debris,
+or if we're unlucky, they end up in a flat.""",
+            "code": "8245",
+        },
+        "clue_2": {
+            "title": "Clue 11 – Gates",
+            "text": """All the noises of the outer worlds calm,
+when you enter through this portal.
+Make sure you lock it on your way in to alarm,
+Not let a rollin ball go out in total.""",
+            "code": "7408",
+        },
+        "clue_3": {
+            "title": "Clue 18 – Posts",
+            "text": """You hit me on my head, its a challenge!
+But then you get pissed when you hit my arms!
+Players hate me, goalkeepers pray to my avenge,
+You'll have to come inside me to win it in a calm.""",
+            "code": "9173",
+        },
+        "clue_4": {
+            "title": "Clue 15 – Roof",
+            "text": """Take a look up at the sky, it must be so nice.
+A scenario of the sunset as the league goes by.
+If you look up and cant see into the abyss.
+Then something metal is hiding your view to eye.""",
+            "code": "2167",
+        },
+    },
+    "Route 7": {
+        "clue_1": {
+            "title": "Clue 4 – Recording station",
+            "text": """Seeing yourself from a different angle and accord,
+Sometimes it's there, sometimes it's not.
+You just pray on a day when its on a proper record,
+That you get to score a banger that's hot.""",
+            "code": "7154",
+        },
+        "clue_2": {
+            "title": "Clue 12 – Entry board",
+            "text": """We've known this arena and app for years,
+We've called out its name a million times!
+Yet for the newcomers to come in and make cheers;
+They hoarded the arenas to recognize the good times!""",
+            "code": "5284",
+        },
+        "clue_3": {
+            "title": "Clue 19 – Small goal posts",
+            "text": """You play with my elder brothers, but not with me.
+They get to stand tall and wide on both ends to take.
+I'm just one of the younger ones, a bit skinny and short,
+Others would warn you to not hit on me even by mistake :(""",
+            "code": "2856",
+        },
+        "clue_4": {
+            "title": "Clue 13 – Bibs cupboard",
+            "text": """We're all ballers on the pitch alike!
+Positions can only make us change unlike.
+How to differ ourselves when teams are of same colours,
+So take this and distinguish the borders that are very similar.""",
+            "code": "5347",
+        },
+    },
+}
+
+if "selected_team" not in st.session_state:
+    st.session_state.selected_team = None
+
+if "team_progress" not in st.session_state:
+    st.session_state.team_progress = {team: 1 for team in TEAM_NAMES}
+
+if "admin_view" not in st.session_state:
+    st.session_state.admin_view = False
+
+def reset_progress():
+    st.session_state.selected_team = None
+    st.session_state.team_progress = {team: 1 for team in TEAM_NAMES}
+    keys_to_remove = [k for k in st.session_state.keys() if k.startswith("code_")]
+    for key in keys_to_remove:
+        del st.session_state[key]
+
+def get_clue_key(progress: int):
+    return {
+        1: "clue_1",
+        2: "clue_2",
+        3: "clue_3",
+        4: "clue_4",
+    }.get(progress)
+
+st.title("🗝️ Treasure Hunt")
+st.write("Choose your team to open your fixed clue route.")
 
 with st.sidebar:
     st.header("Admin")
-    st.caption("Use these controls only during testing or event setup.")
-
     admin_password = st.text_input("Admin password", type="password")
-    if st.button("Reset all progress", use_container_width=True):
-        expected_password = st.secrets["app"]["admin_password"]
-        if admin_password == expected_password:
-            reset_everything()
-            st.session_state.active_user = ""
-            st.session_state.selected_clue = None
-            st.success("All progress has been reset.")
+    if st.button("Reset Progress", use_container_width=True):
+        if admin_password == "9090":
+            reset_progress()
+            st.success("All team progress has been reset.")
         else:
             st.error("Incorrect admin password.")
+    if st.checkbox("Show fixed route assignment", value=False):
+        if admin_password == "9090":
+            st.session_state.admin_view = True
+        else:
+            st.session_state.admin_view = False
+            st.warning("Enter correct admin password to view route assignment.")
 
-if not st.session_state.active_user:
-    show_login()
-else:
-    st.success(f"Logged in as: {st.session_state.active_user}")
-    show_clue_buttons()
-    show_selected_clue()
+if st.session_state.admin_view:
+    st.markdown("---")
+    st.subheader("Fixed Team Route Assignment")
+    for team_name in TEAM_NAMES:
+        route_name = ROUTE_ASSIGNMENT[team_name]
+        st.write(f"**{team_name}** → {route_name}")
 
 st.markdown("---")
-st.caption(
-    "Expected pool sizes for your format: 7 clues in clue_1_pool, 6 in clue_2_pool, 5 in clue_3_pool, and one shared final clue inside the app."
-)
+st.subheader("Select Your Team")
+
+cols = st.columns(3)
+for i, team_name in enumerate(TEAM_NAMES):
+    with cols[i % 3]:
+        if st.button(team_name, use_container_width=True):
+            st.session_state.selected_team = team_name
+
+selected_team = st.session_state.selected_team
+
+if selected_team:
+    route_name = ROUTE_ASSIGNMENT[selected_team]
+    route = ROUTE_DATA[route_name]
+    progress = st.session_state.team_progress[selected_team]
+
+    st.markdown("---")
+    st.subheader(selected_team)
+    st.caption(f"Your progress: Step {progress} of 4")
+
+    if progress in [1, 2, 3, 4]:
+        clue_key = get_clue_key(progress)
+        clue = route[clue_key]
+
+        st.markdown(f"### {clue['title']}")
+        st.info(clue["text"])
+
+        entered_code = st.text_input(
+            "Enter the 4-digit code",
+            max_chars=4,
+            type="password",
+            key=f"code_{selected_team}_{clue_key}",
+            placeholder="Enter code",
+        )
+
+        if st.button(f"Unlock Next Clue for {selected_team}", use_container_width=True):
+            if not entered_code.isdigit() or len(entered_code) != 4:
+                st.error("Please enter a valid 4-digit code.")
+            elif entered_code == clue["code"]:
+                st.session_state.team_progress[selected_team] += 1
+                if st.session_state.team_progress[selected_team] == 5:
+                    st.success("Correct code. Route completed.")
+                else:
+                    st.success("Correct code. Moving to the next clue.")
+                st.rerun()
+            else:
+                st.error("Incorrect code. Try again.")
+
+    elif progress == 5:
+        st.success("You have completed your full route.")
+        st.write("Please report to the organizers.")
