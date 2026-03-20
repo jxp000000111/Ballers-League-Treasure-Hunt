@@ -17,7 +17,7 @@ ROUTE_ASSIGNMENT = {'Amigos FC': 'Route 4', 'Men in Black FC': 'Route 2', 'Timel
 ROUTE_DATA = {
     "Route 1": {
         "clue_1": {
-            "title": "Clue 4",
+            "title": "Clue 1",
             "text": """Heroes of the second half enter from here,
 With restless legs and an Ole-like impact.
 Not quite the battle, not quite the cheer,
@@ -25,7 +25,7 @@ Super-sub comes from here to not keep the warmth intact.""",
             "code": "4817",
         },
         "clue_2": {
-            "title": "Clue 4",
+            "title": "Clue 2",
             "text": """Compared to the rusts and grounds we sit on,
 These are some fine upgraded furniture,
 Tiptoed on the kitchen, they get to have this rest on,
@@ -33,7 +33,7 @@ but unlucky us ballers cant use this for our venture.""",
             "code": "6713",
         },
         "clue_3": {
-            "title": "Clue 4",
+            "title": "Clue 3",
             "text": """The balls, when shot have seen no boundary,
 They fly off high at a missed shot on goal!
 They either end up at the roads and debris,
@@ -51,7 +51,7 @@ So take this and distinguish the borders that are very similar.""",
     },
     "Route 2": {
         "clue_1": {
-            "title": "Clue 4",
+            "title": "Clue 1",
             "text": """The place where you use a lighter,
 and the pressure feels a bit lighter.
 Mood for a puff is quenched at this spot.
@@ -59,7 +59,7 @@ Anywhere else and the vigilance is a bit too hot.""",
             "code": "2639",
         },
         "clue_2": {
-            "title": "Clue 4",
+            "title": "Clue 2",
             "text": """The unseen grid on our pitch, it's surprising.
 Do they know of it's SHOCKING existence? - zilch.
 You walk past the grey many times, it's there standing.
@@ -67,7 +67,7 @@ Shining lights on our pitch with the turn of a switch.""",
             "code": "4582",
         },
         "clue_3": {
-            "title": "Clue 4",
+            "title": "Clue 3",
             "text": """Found in the whole wide world, not just this turf.
 You gotta see the door before you come in, Sherbert.
 Again, make sure you go in the right door enough,
@@ -75,7 +75,7 @@ Or else the world will call you a per-""",
             "code": "3049",
         },
         "clue_4": {
-            "title": "Clue 1 – Center line far from turf",
+            "title": "Clue 4",
             "text": """No crowd sits here, no net is near,
 Yet all games start perpendicularly from here.
 A perfect spot from where the whole turf is seen,
@@ -85,7 +85,7 @@ It’s the place where vision’s more and invention’s mere.""",
     },
     "Route 3": {
         "clue_1": {
-            "title": "Clue 4 – Recording station",
+            "title": "Clue 1",
             "text": """Seeing yourself from a different angle and accord,
 Sometimes it's there, sometimes it's not.
 You just pray on a day when its on a proper record,
@@ -93,7 +93,7 @@ That you get to score a banger that's hot.""",
             "code": "7154",
         },
         "clue_2": {
-            "title": "Clue 6 – Bike parking",
+            "title": "Clue 2",
             "text": """These hotheads carry us from our houses,
 And take us to our home away from home!
 These are the only thing that comes to our clutches,
@@ -101,7 +101,7 @@ Just like our defences, we get to park it on.""",
             "code": "1936",
         },
         "clue_3": {
-            "title": "Clue 17 – Kadak",
+            "title": "Clue 3",
             "text": """There are many dhurandhars among us,
 One such friendly dhurandhar helps us to fetch ball,
 And give water, such a helpful lad he is.
@@ -109,7 +109,7 @@ Go and ask him 'Darling Darling dil kyun toda?!'""",
             "code": "6425",
         },
         "clue_4": {
-            "title": "Clue 16 – Car parking",
+            "title": "Clue 4",
             "text": """All the wagons take a rest here uptight,
 Keeping your seats and boots intact.
 Hope the Korean stardust caught up just right,
@@ -119,7 +119,7 @@ The beast’s rear might just have your redact.""",
     },
     "Route 4": {
         "clue_1": {
-            "title": "Clue 5 – Pickleball net",
+            "title": "Clue 1",
             "text": """The neighbours of our sport, you see em all the time.
 Don't know if you watch the sport or the chicks!
 Feels like an illegit kid of a game of all time,
@@ -127,7 +127,7 @@ But the net feels just as low as there's just bricks.""",
             "code": "5928",
         },
         "clue_2": {
-            "title": "Clue 11 – Gates",
+            "title": "Clue 2",
             "text": """All the noises of the outer worlds calm,
 when you enter through this portal.
 Make sure you lock it on your way in to alarm,
@@ -135,7 +135,7 @@ Not let a rollin ball go out in total.""",
             "code": "7408",
         },
         "clue_3": {
-            "title": "Clue 18 – Posts",
+            "title": "Clue 3",
             "text": """You hit me on my head, its a challenge!
 But then you get pissed when you hit my arms!
 Players hate me, goalkeepers pray to my avenge,
@@ -143,7 +143,7 @@ You'll have to come inside me to win it in a calm.""",
             "code": "9173",
         },
         "clue_4": {
-            "title": "Clue 21 – Ball shed",
+            "title": "Clue 4",
             "text": """I'm filled with something you need only 1 to play.
 Say that you want one from me and they deny it.
 Only the Academy uses the tools that are in me,
@@ -153,7 +153,7 @@ but the hoops and cones crave for the desperate.""",
     },
     "Route 5": {
         "clue_1": {
-            "title": "Clue 10 – Water fridge",
+            "title": "Clue 1",
             "text": """Your thirst find no boundaries here.
 You give a call to Resi and get a flagon.
 The price to pay for a cooler is mere.
@@ -161,7 +161,7 @@ Gonna open, grab one and drink it, then we keep on ballin""",
             "code": "3461",
         },
         "clue_2": {
-            "title": "Clue 12 – Entry board",
+            "title": "Clue 2",
             "text": """We've known this arena and app for years,
 We've called out its name a million times!
 Yet for the newcomers to come in and make cheers;
@@ -169,7 +169,7 @@ They hoarded the arenas to recognize the good times!""",
             "code": "5284",
         },
         "clue_3": {
-            "title": "Clue 19 – Small goal posts",
+            "title": "Clue 3",
             "text": """You play with my elder brothers, but not with me.
 They get to stand tall and wide on both ends to take.
 I'm just one of the younger ones, a bit skinny and short,
@@ -177,7 +177,7 @@ Others would warn you to not hit on me even by mistake :(""",
             "code": "2856",
         },
         "clue_4": {
-            "title": "Clue 14 – Final / divider net",
+            "title": "Clue 4",
             "text": """Hit me when I'm white, I count it a goal!
 Hit me when I'm black, It's off-target.
 But Hit me when I'm Green and the pitch goes split!
@@ -187,7 +187,7 @@ I've got the code in my GREEN form, where am I?""",
     },
     "Route 6": {
         "clue_1": {
-            "title": "Clue 7 – Gate of the apartment",
+            "title": "Clue 1",
             "text": """The balls, when shot have seen no boundary,
 They fly off high at a missed shot on goal!
 They either end up at the roads and debris,
@@ -195,7 +195,7 @@ or if we're unlucky, they end up in a flat.""",
             "code": "8245",
         },
         "clue_2": {
-            "title": "Clue 11 – Gates",
+            "title": "Clue 2",
             "text": """All the noises of the outer worlds calm,
 when you enter through this portal.
 Make sure you lock it on your way in to alarm,
@@ -203,7 +203,7 @@ Not let a rollin ball go out in total.""",
             "code": "7408",
         },
         "clue_3": {
-            "title": "Clue 18 – Posts",
+            "title": "Clue 3",
             "text": """You hit me on my head, its a challenge!
 But then you get pissed when you hit my arms!
 Players hate me, goalkeepers pray to my avenge,
@@ -211,7 +211,7 @@ You'll have to come inside me to win it in a calm.""",
             "code": "9173",
         },
         "clue_4": {
-            "title": "Clue 15 – Roof",
+            "title": "Clue 4",
             "text": """Take a look up at the sky, it must be so nice.
 A scenario of the sunset as the league goes by.
 If you look up and cant see into the abyss.
@@ -221,7 +221,7 @@ Then something metal is hiding your view to eye.""",
     },
     "Route 7": {
         "clue_1": {
-            "title": "Clue 4 – Recording station",
+            "title": "Clue 1",
             "text": """Seeing yourself from a different angle and accord,
 Sometimes it's there, sometimes it's not.
 You just pray on a day when its on a proper record,
@@ -229,7 +229,7 @@ That you get to score a banger that's hot.""",
             "code": "7154",
         },
         "clue_2": {
-            "title": "Clue 12 – Entry board",
+            "title": "Clue 2",
             "text": """We've known this arena and app for years,
 We've called out its name a million times!
 Yet for the newcomers to come in and make cheers;
@@ -237,7 +237,7 @@ They hoarded the arenas to recognize the good times!""",
             "code": "5284",
         },
         "clue_3": {
-            "title": "Clue 19 – Small goal posts",
+            "title": "Clue 3",
             "text": """You play with my elder brothers, but not with me.
 They get to stand tall and wide on both ends to take.
 I'm just one of the younger ones, a bit skinny and short,
@@ -245,7 +245,7 @@ Others would warn you to not hit on me even by mistake :(""",
             "code": "2856",
         },
         "clue_4": {
-            "title": "Clue 13 – Bibs cupboard",
+            "title": "Clue 4",
             "text": """We're all ballers on the pitch alike!
 Positions can only make us change unlike.
 How to differ ourselves when teams are of same colours,
