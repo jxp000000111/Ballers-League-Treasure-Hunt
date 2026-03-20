@@ -17,7 +17,7 @@ ROUTE_ASSIGNMENT = {'Amigos FC': 'Route 4', 'Men in Black FC': 'Route 2', 'Timel
 ROUTE_DATA = {
     "Route 1": {
         "clue_1": {
-            "title": "Clue 2 – Bench",
+            "title": "Clue 4",
             "text": """Heroes of the second half enter from here,
 With restless legs and an Ole-like impact.
 Not quite the battle, not quite the cheer,
@@ -25,7 +25,7 @@ Super-sub comes from here to not keep the warmth intact.""",
             "code": "4817",
         },
         "clue_2": {
-            "title": "Clue 8 – Wooden chairs",
+            "title": "Clue 4",
             "text": """Compared to the rusts and grounds we sit on,
 These are some fine upgraded furniture,
 Tiptoed on the kitchen, they get to have this rest on,
@@ -33,7 +33,7 @@ but unlucky us ballers cant use this for our venture.""",
             "code": "6713",
         },
         "clue_3": {
-            "title": "Clue 23 – Gate of the apartment",
+            "title": "Clue 4",
             "text": """The balls, when shot have seen no boundary,
 They fly off high at a missed shot on goal!
 They either end up at the roads and debris,
@@ -41,7 +41,7 @@ or if we're unlucky, they end up in a flat""",
             "code": "8617",
         },
         "clue_4": {
-            "title": "Clue 13 – Bibs cupboard",
+            "title": "Clue 4",
             "text": """We're all ballers on the pitch alike!
 Positions can only make us change unlike.
 How to differ ourselves when teams are of same colours,
@@ -51,7 +51,7 @@ So take this and distinguish the borders that are very similar.""",
     },
     "Route 2": {
         "clue_1": {
-            "title": "Clue 3 – Back black gate",
+            "title": "Clue 4",
             "text": """The place where you use a lighter,
 and the pressure feels a bit lighter.
 Mood for a puff is quenched at this spot.
@@ -59,7 +59,7 @@ Anywhere else and the vigilance is a bit too hot.""",
             "code": "2639",
         },
         "clue_2": {
-            "title": "Clue 9 – Power grid",
+            "title": "Clue 4",
             "text": """The unseen grid on our pitch, it's surprising.
 Do they know of it's SHOCKING existence? - zilch.
 You walk past the grey many times, it's there standing.
@@ -67,7 +67,7 @@ Shining lights on our pitch with the turn of a switch.""",
             "code": "4582",
         },
         "clue_3": {
-            "title": "Clue 20 – Bathroom",
+            "title": "Clue 4",
             "text": """Found in the whole wide world, not just this turf.
 You gotta see the door before you come in, Sherbert.
 Again, make sure you go in the right door enough,
