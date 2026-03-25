@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.set_page_config(page_title="Treasure Hunt", page_icon="🗝️", layout="centered")
+st.set_page_config(page_title="Ballers League Treasure Hunt", page_icon="⚽🗝️", layout="centered")
 
 TEAM_NAMES = [
     "Amigos FC",
@@ -280,8 +280,8 @@ def get_clue_key(progress: int):
     }.get(progress)
 
 st.title("🗝️ Treasure Hunt")
-st.write("Choose your team to open your fixed clue route.")
-
+st.write("Choose your clue route according to the designated team. Remember - the first to solve these clues will get a hidden reward!! Fastest hunter wins!!")
+st.write("1. Solve the Clue! -- 2. Search out the mystery place according to the clue. -- 3. Find the four digit code that unlocks your next clue. -- 4. Enter the code and unlock your next clue! -- 5. Solve all 5 clues before the other teams do!")
 with st.sidebar:
     st.header("Admin")
     admin_password = st.text_input("Admin password", type="password")
