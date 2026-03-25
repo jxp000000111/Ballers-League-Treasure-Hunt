@@ -292,7 +292,7 @@ with st.sidebar:
         else:
             st.error("Incorrect admin password.")
     if st.checkbox("Show fixed route assignment", value=False):
-        if admin_password == "9090":
+        if admin_password == "Jesus7706*":
             st.session_state.admin_view = True
         else:
             st.session_state.admin_view = False
