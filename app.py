@@ -286,7 +286,7 @@ st.write("1. Solve the Clue!")
 st.write("2. Search out the mystery place according to the clue.")
 st.write("3. Find the four digit code that unlocks your next clue.")
 st.write("4. Enter the code and unlock your next clue!")
-st.write("5. Solve all 5 clues before the other teams do!")
+st.write("5. Solve all 5 clues before the other teams do! Only first THREE TEAMS WIN!")
 st.write("Good Luck HUNTING the extra points!!!")
 
 with st.sidebar:
