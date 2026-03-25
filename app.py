@@ -293,7 +293,7 @@ with st.sidebar:
     st.header("Admin")
     admin_password = st.text_input("Admin password", type="password")
     if st.button("Reset Progress", use_container_width=True):
-        if admin_password == "9090":
+        if admin_password == "Jesus7706*":
             reset_progress()
             st.success("All team progress has been reset.")
         else:
