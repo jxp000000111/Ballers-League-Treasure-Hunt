@@ -8,16 +8,6 @@ st.set_page_config(
     layout="centered"
 )
 
-st.write("Choose your clue route according to the designated team. Remember - the first to solve these clues will get a hidden reward!! Fastest hunter wins!!")
-st.write("1. Solve the Clue!")
-st.write("2. Search out the mystery place according to the clue.")
-st.write("3. Find the four digit code that unlocks your next clue.")
-st.write("4. Enter the code and unlock your next clue!")
-st.write("5. Solve all 5 clues before the other teams do! Only first THREE TEAMS WIN!")
-st.write("Good Luck HUNTING the extra points!!!")
-
-st.image("ballers-league-vol2.png", width=180)
-
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_SERVICE_ROLE_KEY = st.secrets["SUPABASE_SERVICE_ROLE_KEY"]
 
@@ -78,6 +68,20 @@ def team_has_next_tier(team_name: str, next_tier: int) -> bool:
     return bool(res.data)
 
 
+def get_max_tier_for_team(team_name: str) -> int:
+    res = (
+        supabase.table("th_clues")
+        .select("tier")
+        .eq("team_name", team_name)
+        .order("tier", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if res.data:
+        return int(res.data[0]["tier"])
+    return 1
+
+
 def advance_team(team_name: str, current_tier: int):
     next_tier = current_tier + 1
     has_next = team_has_next_tier(team_name, next_tier)
@@ -106,8 +110,8 @@ def verify_pin(team_name: str, tier: int, entered_pin: str):
 
     if correct:
         advance_team(team_name, tier)
-        return True, "Correct pin."
-    return False, "Wrong pin."
+        return True, "Correct pin. Next clue unlocked."
+    return False, "Wrong pin. Try again."
 
 
 def reset_local_messages():
@@ -126,46 +130,174 @@ if "show_clue" not in st.session_state:
 st.markdown(
     """
     <style>
-    .main-title {
+    .stApp {
+        background:
+            radial-gradient(circle at top, rgba(42,84,180,0.24) 0%, rgba(10,20,46,1) 24%, rgba(5,10,24,1) 62%, rgba(2,5,14,1) 100%);
+        color: white;
+    }
+
+    .block-container {
+        max-width: 920px;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
+
+    .hero-wrap {
         text-align: center;
-        font-size: 2.4rem;
-        font-weight: 800;
+        margin-bottom: 1.4rem;
+    }
+
+    .hero-logo {
+        width: 160px;
+        margin: 0 auto 0.85rem auto;
+        display: block;
+        filter: drop-shadow(0 12px 24px rgba(0,0,0,0.35));
+    }
+
+    .hero-title {
+        font-size: 2.6rem;
+        font-weight: 900;
+        letter-spacing: 1px;
+        color: #ffffff;
         margin-bottom: 0.3rem;
-        color: white;
-    }
-    .sub-title {
         text-align: center;
-        font-size: 1.05rem;
-        color: #d7e3ff;
-        margin-bottom: 2rem;
     }
-    .entry-card {
-        background: linear-gradient(180deg, rgba(15,32,70,0.92), rgba(8,18,42,0.96));
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 20px;
-        padding: 1.4rem 1.4rem 1.2rem 1.4rem;
-        box-shadow: 0 14px 34px rgba(0,0,0,0.22);
-        margin-bottom: 1rem;
+
+    .hero-subtitle {
+        font-size: 1.02rem;
+        color: #c8d9ff;
+        text-align: center;
+        margin-bottom: 1.35rem;
     }
-    .clue-card {
-        background: linear-gradient(180deg, rgba(15,32,70,0.92), rgba(8,18,42,0.96));
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 20px;
-        padding: 1.3rem;
-        box-shadow: 0 14px 34px rgba(0,0,0,0.22);
+
+    .premium-card {
+        background: linear-gradient(180deg, rgba(18,31,66,0.96) 0%, rgba(7,14,35,0.98) 100%);
+        border: 1px solid rgba(134,173,255,0.18);
+        border-radius: 22px;
+        padding: 1.35rem;
+        box-shadow: 0 18px 44px rgba(0,0,0,0.28);
+        backdrop-filter: blur(10px);
+        margin-bottom: 1.2rem;
     }
-    .team-pill {
-        display: inline-block;
-        padding: 0.4rem 0.9rem;
-        border-radius: 999px;
-        background: rgba(255,255,255,0.08);
+
+    .final-card {
+        background: linear-gradient(180deg, rgba(85,44,10,0.96) 0%, rgba(41,21,5,0.98) 100%);
+        border: 1px solid rgba(255,198,92,0.24);
+        border-radius: 24px;
+        padding: 1.4rem;
+        box-shadow: 0 18px 44px rgba(0,0,0,0.32);
+        margin-bottom: 1.2rem;
+    }
+
+    .section-title {
+        font-size: 1.45rem;
+        font-weight: 800;
         color: white;
-        font-weight: 700;
         margin-bottom: 0.8rem;
     }
-    .center-wrap {
-        max-width: 760px;
-        margin: 0 auto;
+
+    .muted-text {
+        color: #c7d6fb;
+        font-size: 0.98rem;
+    }
+
+    .rules-box ol {
+        margin-top: 0.4rem;
+        margin-bottom: 0.4rem;
+        padding-left: 1.2rem;
+    }
+
+    .rules-box li {
+        margin-bottom: 0.65rem;
+        color: #e8efff;
+        line-height: 1.45;
+    }
+
+    .team-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: white;
+        font-weight: 700;
+        margin-bottom: 0.7rem;
+    }
+
+    .clue-title {
+        font-size: 1.75rem;
+        font-weight: 900;
+        color: #ffffff;
+        margin-bottom: 0.8rem;
+        text-align: center;
+    }
+
+    .clue-text {
+        color: #eef3ff;
+        font-size: 1.05rem;
+        line-height: 1.75;
+        white-space: pre-line;
+        text-align: center;
+        padding: 0.5rem 0.4rem 0.3rem 0.4rem;
+    }
+
+    .final-title {
+        font-size: 1.8rem;
+        font-weight: 900;
+        text-align: center;
+        color: #ffd36f;
+        margin-bottom: 0.8rem;
+    }
+
+    .footer-note {
+        text-align: center;
+        color: #b9cbf7;
+        margin-top: 0.6rem;
+        font-size: 0.95rem;
+    }
+
+    .progress-wrap {
+        margin-top: 0.3rem;
+        margin-bottom: 1rem;
+    }
+
+    .progress-label {
+        color: #cbd8ff;
+        font-size: 0.95rem;
+        margin-bottom: 0.4rem;
+        text-align: center;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 12px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.08);
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #4a8fff 0%, #7aa8ff 100%);
+    }
+
+    div[data-testid="stButton"] > button {
+        border-radius: 12px !important;
+        font-weight: 700 !important;
+        padding-top: 0.72rem !important;
+        padding-bottom: 0.72rem !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+    }
+
+    div[data-testid="stTextInput"] input {
+        border-radius: 12px !important;
+    }
+
+    div[data-testid="column"] .team-select-btn button {
+        min-height: 62px !important;
+        font-size: 1rem !important;
     }
     </style>
     """,
@@ -178,95 +310,135 @@ if not teams:
     st.error("No teams found in th_teams. Seed the teams table first.")
     st.stop()
 
-with st.container():
-    st.markdown('<div class="center-wrap">', unsafe_allow_html=True)
-    st.markdown('<div class="main-title">🏆 BALLERS LEAGUE TREASURE HUNT</div>', unsafe_allow_html=True)
+st.markdown(
+    """
+    <div class="hero-wrap">
+        <img class="hero-logo" src="https://ballers-league.vercel.app/logos/ballers-league-vol2.png" alt="Ballers League Vol II Logo">
+        <div class="hero-title">BALLERS LEAGUE TREASURE HUNT</div>
+        <div class="hero-subtitle">Crack the clue. Find the code. Unlock the next stage.</div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+if not st.session_state.show_clue:
+    st.markdown('<div class="premium-card rules-box">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">How It Works</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="sub-title">Choose your team first. Your clue is revealed only after confirmation.</div>',
+        """
+        <ol>
+            <li>Solve the clue carefully.</li>
+            <li>Search the mystery location based on the riddle.</li>
+            <li>Find the hidden 4-digit code there.</li>
+            <li>Enter the code to unlock the next clue.</li>
+            <li>Complete all stages before the other teams. Speed matters.</li>
+        </ol>
+        <div class="footer-note"><strong>Good luck hunting those extra points.</strong></div>
+        """,
         unsafe_allow_html=True
     )
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    if not st.session_state.show_clue:
-        st.markdown('<div class="entry-card">', unsafe_allow_html=True)
-        st.markdown("### Team Entry")
-        chosen_team = st.selectbox("Select your team", teams)
+    st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Choose Your Team</div>', unsafe_allow_html=True)
+    st.markdown('<div class="muted-text">Tap your team card below to reveal the active clue.</div>', unsafe_allow_html=True)
 
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Reveal My Clue", use_container_width=True):
-                st.session_state.selected_team = chosen_team
+    cols = st.columns(2)
+    for idx, team in enumerate(teams):
+        with cols[idx % 2]:
+            st.markdown('<div class="team-select-btn">', unsafe_allow_html=True)
+            if st.button(team, use_container_width=True, key=f"team_{team}"):
+                st.session_state.selected_team = team
                 st.session_state.show_clue = True
-                st.rerun()
-        with col2:
-            if st.button("Reset Selection", use_container_width=True):
-                st.session_state.selected_team = None
-                st.session_state.show_clue = False
                 reset_local_messages()
                 st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown("</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-        st.stop()
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.stop()
 
-    selected_team = st.session_state.selected_team
-    team_state = get_team_state(selected_team)
+selected_team = st.session_state.selected_team
+team_state = get_team_state(selected_team)
 
-    if not team_state:
-        st.error("Team state not found.")
-        st.stop()
+if not team_state:
+    st.error("Team state not found.")
+    st.stop()
 
-    current_tier = int(team_state["current_tier"])
-    is_finished = bool(team_state["is_finished"])
+current_tier = int(team_state["current_tier"])
+is_finished = bool(team_state["is_finished"])
+max_tier = get_max_tier_for_team(selected_team)
+progress_pct = int((current_tier / max_tier) * 100) if max_tier else 0
 
-    top_left, top_right = st.columns([3, 1])
-    with top_left:
-        st.markdown(f'<div class="team-pill">{selected_team}</div>', unsafe_allow_html=True)
-    with top_right:
-        if st.button("Change Team", use_container_width=True):
-            st.session_state.selected_team = None
-            st.session_state.show_clue = False
-            reset_local_messages()
-            st.rerun()
-
-    if is_finished:
-        st.success(f"{selected_team} has completed the treasure hunt.")
-        st.markdown("</div>", unsafe_allow_html=True)
-        st.stop()
-
-    clue = get_clue_for_team(selected_team, current_tier)
-    if not clue:
-        st.error(f"No clue assigned for {selected_team} at tier {current_tier}.")
-        st.markdown("</div>", unsafe_allow_html=True)
-        st.stop()
-
-    st.markdown('<div class="clue-card">', unsafe_allow_html=True)
-    st.markdown(f"### {clue['clue_title']}")
-    st.write(clue["clue_text"])
-
-    with st.form("pin_form", clear_on_submit=True):
-        entered_pin = st.text_input("Enter 4-digit pin", max_chars=4, type="password")
-        submitted = st.form_submit_button("Unlock Next Clue", use_container_width=True)
-
-        if submitted:
-            reset_local_messages()
-
-            if not entered_pin.strip():
-                st.session_state["error_msg"] = "Please enter the pin."
-            else:
-                ok, message = verify_pin(selected_team, current_tier, entered_pin)
-                if ok:
-                    st.session_state["success_msg"] = message
-                else:
-                    st.session_state["error_msg"] = message
-
-    if "success_msg" in st.session_state:
-        st.success(st.session_state["success_msg"])
+top_left, top_right = st.columns([3, 1])
+with top_left:
+    st.markdown(
+        f'<div class="team-badge">Team: {selected_team} | Tier {current_tier} / {max_tier}</div>',
+        unsafe_allow_html=True
+    )
+with top_right:
+    if st.button("Change Team", use_container_width=True):
+        st.session_state.selected_team = None
+        st.session_state.show_clue = False
+        reset_local_messages()
         st.rerun()
 
-    if "error_msg" in st.session_state:
-        st.error(st.session_state["error_msg"])
+st.markdown(
+    f"""
+    <div class="progress-wrap">
+        <div class="progress-label">Progress: {progress_pct}%</div>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {progress_pct}%;"></div>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
+if is_finished:
+    st.success(f"{selected_team} has completed the treasure hunt.")
+    st.stop()
+
+clue = get_clue_for_team(selected_team, current_tier)
+if not clue:
+    st.error(f"No clue assigned for {selected_team} at tier {current_tier}.")
+    st.stop()
+
+if clue.get("is_final"):
+    st.markdown('<div class="final-card">', unsafe_allow_html=True)
+    st.markdown('<div class="final-title">FINAL CLUE</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="clue-text">{clue["clue_text"]}</div>', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
+else:
+    st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+    st.markdown(f'<div class="clue-title">{clue["clue_title"]}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="clue-text">{clue["clue_text"]}</div>', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
+
+st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+st.markdown('<div class="section-title">Unlock Next Clue</div>', unsafe_allow_html=True)
+st.markdown('<div class="muted-text">Enter the 4-digit code found at the clue location.</div>', unsafe_allow_html=True)
+
+with st.form("pin_form", clear_on_submit=True):
+    entered_pin = st.text_input("Enter 4-digit pin", max_chars=4, type="password")
+    submitted = st.form_submit_button("Unlock Next Clue", use_container_width=True)
+
+    if submitted:
+        reset_local_messages()
+
+        if not entered_pin.strip():
+            st.session_state["error_msg"] = "Please enter the pin."
+        else:
+            ok, message = verify_pin(selected_team, current_tier, entered_pin)
+            if ok:
+                st.session_state["success_msg"] = message
+            else:
+                st.session_state["error_msg"] = message
+
+if "success_msg" in st.session_state:
+    st.success(st.session_state["success_msg"])
+    st.rerun()
+
 if "error_msg" in st.session_state:
     st.error(st.session_state["error_msg"])
+
+st.markdown("</div>", unsafe_allow_html=True)
