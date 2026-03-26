@@ -13,6 +13,18 @@ SUPABASE_SERVICE_ROLE_KEY = st.secrets["SUPABASE_SERVICE_ROLE_KEY"]
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
+TEAM_LOGOS = {
+    "Amigos FC": "https://ballers-league.vercel.app/logos/amigos.png",
+    "Men in Black FC": "https://ballers-league.vercel.app/logos/meninblack.png",
+    "Timeless Titans": "https://ballers-league.vercel.app/logos/timelesstitans.png",
+    "Galacticos 7": "https://ballers-league.vercel.app/logos/galacticos7.png",
+    "Red Devilz": "https://ballers-league.vercel.app/logos/reddevilz.png",
+    "Beast FC": "https://ballers-league.vercel.app/logos/beast.png",
+    "Blue Lock FC": "https://ballers-league.vercel.app/logos/bluelock.png",
+}
+
+BALLERS_LOGO = "https://ballers-league.vercel.app/logos/ballers-league-vol2.png"
+
 
 def get_all_teams():
     res = (
@@ -33,6 +45,18 @@ def get_team_state(team_name: str):
         .execute()
     )
     return res.data
+
+
+def get_all_team_states():
+    res = (
+        supabase.table("th_teams")
+        .select("*")
+        .order("is_finished", desc=True)
+        .order("current_tier", desc=True)
+        .order("updated_at")
+        .execute()
+    )
+    return res.data or []
 
 
 def get_clue_for_team(team_name: str, tier: int):
@@ -122,10 +146,10 @@ def reset_local_messages():
 
 if "selected_team" not in st.session_state:
     st.session_state.selected_team = None
-
 if "show_clue" not in st.session_state:
     st.session_state.show_clue = False
-
+if "page_mode" not in st.session_state:
+    st.session_state.page_mode = "play"
 
 st.markdown(
     """
@@ -137,37 +161,37 @@ st.markdown(
     }
 
     .block-container {
-        max-width: 920px;
-        padding-top: 2rem;
+        max-width: 980px;
+        padding-top: 1.6rem;
         padding-bottom: 3rem;
     }
 
     .hero-wrap {
         text-align: center;
-        margin-bottom: 1.4rem;
+        margin-bottom: 1.2rem;
     }
 
     .hero-logo {
         width: 160px;
-        margin: 0 auto 0.85rem auto;
+        margin: 0 auto 0.8rem auto;
         display: block;
         filter: drop-shadow(0 12px 24px rgba(0,0,0,0.35));
     }
 
     .hero-title {
-        font-size: 2.6rem;
+        font-size: 2.55rem;
         font-weight: 900;
         letter-spacing: 1px;
         color: #ffffff;
-        margin-bottom: 0.3rem;
+        margin-bottom: 0.25rem;
         text-align: center;
     }
 
     .hero-subtitle {
-        font-size: 1.02rem;
+        font-size: 1rem;
         color: #c8d9ff;
         text-align: center;
-        margin-bottom: 1.35rem;
+        margin-bottom: 1.2rem;
     }
 
     .premium-card {
@@ -283,6 +307,88 @@ st.markdown(
         background: linear-gradient(90deg, #4a8fff 0%, #7aa8ff 100%);
     }
 
+    .team-card-wrap {
+        margin-bottom: 0.9rem;
+    }
+
+    .team-card {
+        background: linear-gradient(180deg, rgba(24,40,83,0.96) 0%, rgba(10,19,46,0.98) 100%);
+        border: 1px solid rgba(134,173,255,0.18);
+        border-radius: 18px;
+        padding: 1rem 0.8rem 0.85rem 0.8rem;
+        text-align: center;
+        min-height: 210px;
+        box-shadow: 0 14px 34px rgba(0,0,0,0.22);
+    }
+
+    .team-card-selected {
+        border: 1px solid rgba(255,210,102,0.65);
+        box-shadow: 0 0 0 1px rgba(255,210,102,0.28), 0 16px 38px rgba(0,0,0,0.28);
+    }
+
+    .team-logo {
+        width: 86px;
+        height: 86px;
+        object-fit: contain;
+        margin: 0 auto 0.65rem auto;
+        display: block;
+        filter: drop-shadow(0 8px 16px rgba(0,0,0,0.25));
+    }
+
+    .team-name {
+        font-weight: 800;
+        color: white;
+        font-size: 1rem;
+        margin-bottom: 0.45rem;
+        min-height: 46px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .team-tier {
+        color: #c8d9ff;
+        font-size: 0.92rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .team-finish {
+        color: #ffd36f;
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+
+    .leader-row {
+        display: grid;
+        grid-template-columns: 60px 1fr 130px 130px;
+        gap: 12px;
+        align-items: center;
+        padding: 0.9rem 0.2rem;
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .leader-head {
+        font-weight: 900;
+        color: #aac7ff;
+        padding-bottom: 0.6rem;
+        border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .rank-pill {
+        width: 38px;
+        height: 38px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        font-weight: 900;
+        background: rgba(255,255,255,0.08);
+    }
+
+    .rank-top {
+        background: linear-gradient(180deg, #f7c948 0%, #d59d10 100%);
+        color: #231700;
+    }
+
     div[data-testid="stButton"] > button {
         border-radius: 12px !important;
         font-weight: 700 !important;
@@ -294,32 +400,89 @@ st.markdown(
     div[data-testid="stTextInput"] input {
         border-radius: 12px !important;
     }
-
-    div[data-testid="column"] .team-select-btn button {
-        min-height: 62px !important;
-        font-size: 1rem !important;
-    }
     </style>
     """,
     unsafe_allow_html=True
 )
 
 teams = get_all_teams()
+team_states = get_all_team_states()
 
 if not teams:
     st.error("No teams found in th_teams. Seed the teams table first.")
     st.stop()
 
+team_state_map = {row["team_name"]: row for row in team_states}
+
 st.markdown(
-    """
+    f"""
     <div class="hero-wrap">
-        <img class="hero-logo" src="https://ballers-league.vercel.app/logos/ballers-league-vol2.png" alt="Ballers League Vol II Logo">
+        <img class="hero-logo" src="{BALLERS_LOGO}" alt="Ballers League Vol II Logo">
         <div class="hero-title">BALLERS LEAGUE TREASURE HUNT</div>
         <div class="hero-subtitle">Crack the clue. Find the code. Unlock the next stage.</div>
     </div>
     """,
     unsafe_allow_html=True
 )
+
+nav1, nav2 = st.columns(2)
+with nav1:
+    if st.button("Play", use_container_width=True):
+        st.session_state.page_mode = "play"
+        st.rerun()
+with nav2:
+    if st.button("Leaderboard", use_container_width=True):
+        st.session_state.page_mode = "leaderboard"
+        st.rerun()
+
+if st.session_state.page_mode == "leaderboard":
+    st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Treasure Hunt Leaderboard</div>', unsafe_allow_html=True)
+    st.markdown('<div class="muted-text">Teams are ranked by completion first, then highest tier reached, then fastest updated time.</div>', unsafe_allow_html=True)
+
+    ranked = sorted(
+        team_states,
+        key=lambda x: (
+            0 if x.get("is_finished") else 1,
+            -int(x.get("current_tier", 1)),
+            str(x.get("updated_at", ""))
+        )
+    )
+
+    st.markdown(
+        """
+        <div class="leader-row leader-head">
+            <div>Rank</div>
+            <div>Team</div>
+            <div>Tier</div>
+            <div>Status</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    for idx, row in enumerate(ranked, start=1):
+        team_name = row["team_name"]
+        tier = int(row.get("current_tier", 1))
+        finished = bool(row.get("is_finished", False))
+        rank_class = "rank-pill rank-top" if idx <= 3 else "rank-pill"
+
+        status = "Finished" if finished else "In Progress"
+
+        st.markdown(
+            f"""
+            <div class="leader-row">
+                <div><div class="{rank_class}">{idx}</div></div>
+                <div><strong>{team_name}</strong></div>
+                <div>Tier {tier}</div>
+                <div>{status}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.stop()
 
 if not st.session_state.show_clue:
     st.markdown('<div class="premium-card rules-box">', unsafe_allow_html=True)
@@ -345,14 +508,32 @@ if not st.session_state.show_clue:
 
     cols = st.columns(2)
     for idx, team in enumerate(teams):
+        row = team_state_map.get(team, {})
+        tier = int(row.get("current_tier", 1))
+        finished = bool(row.get("is_finished", False))
+        max_tier = get_max_tier_for_team(team)
+        selected = st.session_state.selected_team == team
+        card_class = "team-card team-card-selected" if selected else "team-card"
+
         with cols[idx % 2]:
-            st.markdown('<div class="team-select-btn">', unsafe_allow_html=True)
-            if st.button(team, use_container_width=True, key=f"team_{team}"):
+            st.markdown('<div class="team-card-wrap">', unsafe_allow_html=True)
+            st.markdown(
+                f"""
+                <div class="{card_class}">
+                    <img class="team-logo" src="{TEAM_LOGOS.get(team, BALLERS_LOGO)}" alt="{team}">
+                    <div class="team-name">{team}</div>
+                    <div class="team-tier">Tier {tier} / {max_tier}</div>
+                    <div class="team-finish">{'Completed' if finished else 'Ready to Hunt'}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            if st.button(f"Select {team}", key=f"team_{team}", use_container_width=True):
                 st.session_state.selected_team = team
                 st.session_state.show_clue = True
                 reset_local_messages()
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
