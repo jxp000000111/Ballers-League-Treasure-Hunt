@@ -15,17 +15,13 @@ st.write("3. Find the four digit code that unlocks your next clue.")
 st.write("4. Enter the code and unlock your next clue!")
 st.write("5. Solve all 5 clues before the other teams do! Only first THREE TEAMS WIN!")
 st.write("Good Luck HUNTING the extra points!!!")
-# ----------------------------
-# Supabase setup
-# ----------------------------
+
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_SERVICE_ROLE_KEY = st.secrets["SUPABASE_SERVICE_ROLE_KEY"]
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-# ----------------------------
-# Helpers
-# ----------------------------
+
 def get_all_teams():
     res = (
         supabase.table("th_teams")
@@ -34,6 +30,7 @@ def get_all_teams():
         .execute()
     )
     return [row["team_name"] for row in (res.data or [])]
+
 
 def get_team_state(team_name: str):
     res = (
@@ -44,6 +41,7 @@ def get_team_state(team_name: str):
         .execute()
     )
     return res.data
+
 
 def get_clue_for_team(team_name: str, tier: int):
     res = (
@@ -56,6 +54,7 @@ def get_clue_for_team(team_name: str, tier: int):
     )
     return res.data
 
+
 def log_attempt(team_name: str, tier: int, entered_pin: str, is_success: bool):
     supabase.table("th_attempts").insert({
         "team_name": team_name,
@@ -63,6 +62,7 @@ def log_attempt(team_name: str, tier: int, entered_pin: str, is_success: bool):
         "entered_pin": entered_pin,
         "is_success": is_success
     }).execute()
+
 
 def team_has_next_tier(team_name: str, next_tier: int) -> bool:
     res = (
@@ -74,6 +74,7 @@ def team_has_next_tier(team_name: str, next_tier: int) -> bool:
         .execute()
     )
     return bool(res.data)
+
 
 def advance_team(team_name: str, current_tier: int):
     next_tier = current_tier + 1
@@ -92,6 +93,7 @@ def advance_team(team_name: str, current_tier: int):
             "updated_at": datetime.now(timezone.utc).isoformat()
         }).eq("team_name", team_name).execute()
 
+
 def verify_pin(team_name: str, tier: int, entered_pin: str):
     clue = get_clue_for_team(team_name, tier)
     if not clue:
@@ -105,16 +107,21 @@ def verify_pin(team_name: str, tier: int, entered_pin: str):
         return True, "Correct pin."
     return False, "Wrong pin."
 
+
 def reset_local_messages():
     for key in ["success_msg", "error_msg"]:
         if key in st.session_state:
             del st.session_state[key]
 
-# ----------------------------
-# UI
-# ----------------------------
+
+if "selected_team" not in st.session_state:
+    st.session_state.selected_team = None
+
+if "show_clue" not in st.session_state:
+    st.session_state.show_clue = False
+
 st.title("🏆 Ballers League Treasure Hunt")
-st.caption("Enter your team, solve the clue, unlock the next one.")
+st.caption("Select your team first. Then your clue will be revealed.")
 
 teams = get_all_teams()
 
@@ -122,7 +129,26 @@ if not teams:
     st.error("No teams found in th_teams. Seed the teams table first.")
     st.stop()
 
-selected_team = st.selectbox("Select your team", teams)
+if not st.session_state.show_clue:
+    chosen_team = st.selectbox("Select your team", teams)
+
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        if st.button("Continue"):
+            st.session_state.selected_team = chosen_team
+            st.session_state.show_clue = True
+            st.rerun()
+
+    with col2:
+        if st.button("Reset Selection"):
+            st.session_state.selected_team = None
+            st.session_state.show_clue = False
+            reset_local_messages()
+            st.rerun()
+
+    st.stop()
+
+selected_team = st.session_state.selected_team
 
 team_state = get_team_state(selected_team)
 if not team_state:
@@ -131,6 +157,16 @@ if not team_state:
 
 current_tier = int(team_state["current_tier"])
 is_finished = bool(team_state["is_finished"])
+
+col1, col2 = st.columns([3, 1])
+with col1:
+    st.info(f"Team: {selected_team}")
+with col2:
+    if st.button("Change Team"):
+        st.session_state.selected_team = None
+        st.session_state.show_clue = False
+        reset_local_messages()
+        st.rerun()
 
 if is_finished:
     st.success(f"{selected_team} has completed the treasure hunt.")
@@ -166,6 +202,3 @@ if "success_msg" in st.session_state:
 
 if "error_msg" in st.session_state:
     st.error(st.session_state["error_msg"])
-
-
-
