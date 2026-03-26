@@ -16,7 +16,7 @@ st.write("4. Enter the code and unlock your next clue!")
 st.write("5. Solve all 5 clues before the other teams do! Only first THREE TEAMS WIN!")
 st.write("Good Luck HUNTING the extra points!!!")
 
-st.image("/Ballers-League-Treasure-Hunt/main/ballers-league-vol2.png", width=180)
+st.image("ballers-league-vol2.png", width=180)
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_SERVICE_ROLE_KEY = st.secrets["SUPABASE_SERVICE_ROLE_KEY"]
