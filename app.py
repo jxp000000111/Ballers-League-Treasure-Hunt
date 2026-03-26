@@ -51,9 +51,6 @@ def get_all_team_states():
     res = (
         supabase.table("th_teams")
         .select("*")
-        .order("is_finished", desc=True)
-        .order("current_tier", desc=True)
-        .order("updated_at")
         .execute()
     )
     return res.data or []
@@ -109,18 +106,21 @@ def get_max_tier_for_team(team_name: str) -> int:
 def advance_team(team_name: str, current_tier: int):
     next_tier = current_tier + 1
     has_next = team_has_next_tier(team_name, next_tier)
+    now_ts = datetime.now(timezone.utc).isoformat()
 
     if has_next:
         supabase.table("th_teams").update({
             "current_tier": next_tier,
             "is_finished": False,
-            "updated_at": datetime.now(timezone.utc).isoformat()
+            "finished_at": None,
+            "updated_at": now_ts
         }).eq("team_name", team_name).execute()
     else:
         supabase.table("th_teams").update({
             "current_tier": current_tier,
             "is_finished": True,
-            "updated_at": datetime.now(timezone.utc).isoformat()
+            "finished_at": now_ts,
+            "updated_at": now_ts
         }).eq("team_name", team_name).execute()
 
 
@@ -360,7 +360,7 @@ st.markdown(
 
     .leader-row {
         display: grid;
-        grid-template-columns: 60px 1fr 130px 130px;
+        grid-template-columns: 60px 1fr 110px 120px 180px;
         gap: 12px;
         align-items: center;
         padding: 0.9rem 0.2rem;
@@ -438,14 +438,18 @@ with nav2:
 if st.session_state.page_mode == "leaderboard":
     st.markdown('<div class="premium-card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">Treasure Hunt Leaderboard</div>', unsafe_allow_html=True)
-    st.markdown('<div class="muted-text">Teams are ranked by completion first, then highest tier reached, then fastest updated time.</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="muted-text">Teams are ranked by exact finish time first. Unfinished teams are ranked by highest tier and then latest progress time.</div>',
+        unsafe_allow_html=True
+    )
 
     ranked = sorted(
         team_states,
         key=lambda x: (
             0 if x.get("is_finished") else 1,
+            str(x.get("finished_at") or "9999-12-31T23:59:59+00:00"),
             -int(x.get("current_tier", 1)),
-            str(x.get("updated_at", ""))
+            str(x.get("updated_at", "9999-12-31T23:59:59+00:00"))
         )
     )
 
@@ -456,6 +460,7 @@ if st.session_state.page_mode == "leaderboard":
             <div>Team</div>
             <div>Tier</div>
             <div>Status</div>
+            <div>Finished At</div>
         </div>
         """,
         unsafe_allow_html=True
@@ -466,8 +471,9 @@ if st.session_state.page_mode == "leaderboard":
         tier = int(row.get("current_tier", 1))
         finished = bool(row.get("is_finished", False))
         rank_class = "rank-pill rank-top" if idx <= 3 else "rank-pill"
-
         status = "Finished" if finished else "In Progress"
+        finished_at = row.get("finished_at")
+        finished_at_display = finished_at.replace("T", " ").split(".")[0] if finished_at else "-"
 
         st.markdown(
             f"""
@@ -476,6 +482,7 @@ if st.session_state.page_mode == "leaderboard":
                 <div><strong>{team_name}</strong></div>
                 <div>Tier {tier}</div>
                 <div>{status}</div>
+                <div>{finished_at_display}</div>
             </div>
             """,
             unsafe_allow_html=True
