@@ -1,6 +1,7 @@
 import streamlit as st
 from supabase import create_client, Client
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 st.set_page_config(
     page_title="Ballers League Treasure Hunt",
@@ -360,7 +361,7 @@ st.markdown(
 
     .leader-row {
         display: grid;
-        grid-template-columns: 60px 1fr 110px 120px 180px;
+        grid-template-columns: 60px 1fr 110px 120px 220px;
         gap: 12px;
         align-items: center;
         padding: 0.9rem 0.2rem;
@@ -473,7 +474,13 @@ if st.session_state.page_mode == "leaderboard":
         rank_class = "rank-pill rank-top" if idx <= 3 else "rank-pill"
         status = "Finished" if finished else "In Progress"
         finished_at = row.get("finished_at")
-        finished_at_display = finished_at.replace("T", " ").split(".")[0] if finished_at else "-"
+
+        if finished_at:
+            dt_utc = datetime.fromisoformat(finished_at.replace("Z", "+00:00"))
+            dt_ist = dt_utc.astimezone(ZoneInfo("Asia/Kolkata"))
+            finished_at_display = dt_ist.strftime("%Y-%m-%d %I:%M:%S %p IST")
+        else:
+            finished_at_display = "-"
 
         st.markdown(
             f"""
