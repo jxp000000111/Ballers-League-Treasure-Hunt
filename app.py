@@ -2,6 +2,7 @@ import streamlit as st
 from supabase import create_client, Client
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
+import re
 
 st.set_page_config(
     page_title="Ballers League Treasure Hunt",
@@ -25,6 +26,15 @@ TEAM_LOGOS = {
 }
 
 BALLERS_LOGO = "https://ballers-league.vercel.app/logos/ballers-league-vol2.png"
+
+
+def normalize_answer(text: str) -> str:
+    if not text:
+        return ""
+    text = text.strip().lower()
+    text = re.sub(r"[^\w\s]", "", text)
+    text = re.sub(r"\s+", " ", text)
+    return text
 
 
 def get_all_teams():
@@ -67,6 +77,51 @@ def get_clue_for_team(team_name: str, tier: int):
         .execute()
     )
     return res.data
+
+
+def get_quiz_for_team(team_name: str, tier: int):
+    res = (
+        supabase.table("th_quiz")
+        .select("*")
+        .eq("team_name", team_name)
+        .eq("tier", tier)
+        .single()
+        .execute()
+    )
+    return res.data
+
+
+def get_quiz_progress(team_name: str, tier: int):
+    res = (
+        supabase.table("th_quiz_progress")
+        .select("*")
+        .eq("team_name", team_name)
+        .eq("tier", tier)
+        .limit(1)
+        .execute()
+    )
+    return res.data[0] if res.data else None
+
+
+def mark_quiz_correct(team_name: str, tier: int):
+    now_ts = datetime.now(timezone.utc).isoformat()
+    supabase.table("th_quiz_progress").upsert({
+        "team_name": team_name,
+        "tier": tier,
+        "is_correct": True,
+        "answered_at": now_ts
+    }).execute()
+
+
+def unlock_quiz_for_tier(team_name: str, tier: int):
+    existing = get_quiz_progress(team_name, tier)
+    if not existing:
+        supabase.table("th_quiz_progress").insert({
+            "team_name": team_name,
+            "tier": tier,
+            "is_correct": False,
+            "answered_at": None
+        }).execute()
 
 
 def log_attempt(team_name: str, tier: int, entered_pin: str, is_success: bool):
@@ -134,8 +189,8 @@ def verify_pin(team_name: str, tier: int, entered_pin: str):
     log_attempt(team_name, tier, entered_pin.strip(), correct)
 
     if correct:
-        advance_team(team_name, tier)
-        return True, "Correct pin. Next clue unlocked."
+        unlock_quiz_for_tier(team_name, tier)
+        return True, "Correct pin. Quiz unlocked."
     return False, "Wrong pin. Try again."
 
 
@@ -211,6 +266,15 @@ st.markdown(
         border-radius: 24px;
         padding: 1.4rem;
         box-shadow: 0 18px 44px rgba(0,0,0,0.32);
+        margin-bottom: 1.2rem;
+    }
+
+    .quiz-card {
+        background: linear-gradient(180deg, rgba(31,50,96,0.96) 0%, rgba(11,20,48,0.98) 100%);
+        border: 1px solid rgba(110,160,255,0.2);
+        border-radius: 22px;
+        padding: 1.35rem;
+        box-shadow: 0 18px 44px rgba(0,0,0,0.28);
         margin-bottom: 1.2rem;
     }
 
@@ -507,7 +571,8 @@ if not st.session_state.show_clue:
             <li>Solve the clue carefully.</li>
             <li>Search the mystery location based on the riddle.</li>
             <li>Find the hidden 4-digit code there.</li>
-            <li>Enter the code to unlock the next clue.</li>
+            <li>Enter the code to unlock the football quiz.</li>
+            <li>Answer the quiz correctly to unlock the next clue.</li>
             <li>Complete all stages before the other teams. Speed matters.</li>
         </ol>
         <div class="footer-note"><strong>Good luck hunting those extra points.</strong></div>
@@ -610,12 +675,12 @@ else:
     st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-st.markdown('<div class="section-title">Unlock Next Clue</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">Unlock Quiz</div>', unsafe_allow_html=True)
 st.markdown('<div class="muted-text">Enter the 4-digit code found at the clue location.</div>', unsafe_allow_html=True)
 
 with st.form("pin_form", clear_on_submit=True):
     entered_pin = st.text_input("Enter 4-digit pin", max_chars=4, type="password")
-    submitted = st.form_submit_button("Unlock Next Clue", use_container_width=True)
+    submitted = st.form_submit_button("Unlock Quiz", use_container_width=True)
 
     if submitted:
         reset_local_messages()
@@ -631,9 +696,46 @@ with st.form("pin_form", clear_on_submit=True):
 
 if "success_msg" in st.session_state:
     st.success(st.session_state["success_msg"])
-    st.rerun()
 
 if "error_msg" in st.session_state:
     st.error(st.session_state["error_msg"])
 
-st.markdown("</div>", unsafe_allow_html=True)
+quiz = get_quiz_for_team(selected_team, current_tier)
+quiz_progress = get_quiz_progress(selected_team, current_tier)
+
+quiz_unlocked = quiz_progress is not None
+quiz_completed = bool(quiz_progress and quiz_progress.get("is_correct"))
+
+if quiz and quiz_unlocked and not quiz_completed:
+    st.markdown('<div class="quiz-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Football Quiz Gate</div>', unsafe_allow_html=True)
+    st.markdown('<div class="muted-text">Answer correctly to unlock the next clue.</div>', unsafe_allow_html=True)
+
+    if quiz.get("image_url"):
+        st.image(quiz["image_url"], use_container_width=True)
+
+    st.markdown(f"### {quiz['question_text']}")
+
+    answer = st.text_input(
+        "Type your answer",
+        key=f"quiz_text_{selected_team}_{current_tier}"
+    )
+
+    if st.button("Submit Quiz Answer", use_container_width=True):
+        if not answer or not answer.strip():
+            st.error("Please answer the quiz.")
+        else:
+            user_answer = normalize_answer(answer)
+            correct_answer = normalize_answer(quiz["correct_answer"])
+
+            if user_answer == correct_answer:
+                mark_quiz_correct(selected_team, current_tier)
+                advance_team(selected_team, current_tier)
+                st.success("Correct answer. Next clue unlocked.")
+                st.rerun()
+            else:
+                st.error("Wrong answer. Try again.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+elif quiz and quiz_completed:
+    st.success("Quiz completed for this tier.")
