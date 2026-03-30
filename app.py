@@ -105,23 +105,27 @@ def get_quiz_progress(team_name: str, tier: int):
 
 def mark_quiz_correct(team_name: str, tier: int):
     now_ts = datetime.now(timezone.utc).isoformat()
-    supabase.table("th_quiz_progress").upsert({
-        "team_name": team_name,
-        "tier": tier,
-        "is_correct": True,
-        "answered_at": now_ts
-    }).execute()
+    supabase.table("th_quiz_progress").upsert(
+        {
+            "team_name": team_name,
+            "tier": tier,
+            "is_correct": True,
+            "answered_at": now_ts
+        },
+        on_conflict="team_name,tier"
+    ).execute()
 
 
 def unlock_quiz_for_tier(team_name: str, tier: int):
-    existing = get_quiz_progress(team_name, tier)
-    if not existing:
-        supabase.table("th_quiz_progress").insert({
+    supabase.table("th_quiz_progress").upsert(
+        {
             "team_name": team_name,
             "tier": tier,
             "is_correct": False,
             "answered_at": None
-        }).execute()
+        },
+        on_conflict="team_name,tier"
+    ).execute()
 
 
 def log_attempt(team_name: str, tier: int, entered_pin: str, is_success: bool):
