@@ -715,8 +715,13 @@ if quiz and quiz_unlocked and not quiz_completed:
     st.markdown('<div class="section-title">Football Quiz Gate</div>', unsafe_allow_html=True)
     st.markdown('<div class="muted-text">Answer correctly to unlock the next clue.</div>', unsafe_allow_html=True)
 
-    if quiz.get("image_url"):
-        st.image(quiz["image_url"], use_container_width=True)
+image_url = quiz.get("image_url")
+
+if image_url and isinstance(image_url, str) and image_url.strip().lower() not in ["0", "none", "null"]:
+    try:
+        st.image(image_url.strip(), use_container_width=True)
+    except Exception:
+        st.warning("Quiz image could not be loaded.")
 
     st.markdown(f"### {quiz['question_text']}")
 
