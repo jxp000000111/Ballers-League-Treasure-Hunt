@@ -103,26 +103,28 @@ def get_quiz_progress(team_name: str, tier: int):
     return res.data[0] if res.data else None
 
 
+def unlock_quiz_for_tier(team_name: str, tier: int):
+    supabase.table("th_quiz_progress").upsert(
+        {
+            "team_name": team_name,
+            "tier": tier,
+            "is_unlocked": True,
+            "is_correct": False,
+            "answered_at": None
+        },
+        on_conflict="team_name,tier"
+    ).execute()
+
+
 def mark_quiz_correct(team_name: str, tier: int):
     now_ts = datetime.now(timezone.utc).isoformat()
     supabase.table("th_quiz_progress").upsert(
         {
             "team_name": team_name,
             "tier": tier,
+            "is_unlocked": True,
             "is_correct": True,
             "answered_at": now_ts
-        },
-        on_conflict="team_name,tier"
-    ).execute()
-
-
-def unlock_quiz_for_tier(team_name: str, tier: int):
-    supabase.table("th_quiz_progress").upsert(
-        {
-            "team_name": team_name,
-            "tier": tier,
-            "is_correct": False,
-            "answered_at": None
         },
         on_conflict="team_name,tier"
     ).execute()
@@ -707,7 +709,7 @@ if "error_msg" in st.session_state:
 quiz = get_quiz_for_team(selected_team, current_tier)
 quiz_progress = get_quiz_progress(selected_team, current_tier)
 
-quiz_unlocked = quiz_progress is not None
+quiz_unlocked = bool(quiz_progress and quiz_progress.get("is_unlocked"))
 quiz_completed = bool(quiz_progress and quiz_progress.get("is_correct"))
 
 if quiz and quiz_unlocked and not quiz_completed:
@@ -715,13 +717,12 @@ if quiz and quiz_unlocked and not quiz_completed:
     st.markdown('<div class="section-title">Football Quiz Gate</div>', unsafe_allow_html=True)
     st.markdown('<div class="muted-text">Answer correctly to unlock the next clue.</div>', unsafe_allow_html=True)
 
-image_url = quiz.get("image_url")
-
-if image_url and isinstance(image_url, str) and image_url.strip().lower() not in ["0", "none", "null"]:
-    try:
-        st.image(image_url.strip(), use_container_width=True)
-    except Exception:
-        st.warning("Quiz image could not be loaded.")
+    image_url = quiz.get("image_url")
+    if image_url and isinstance(image_url, str) and image_url.strip().lower() not in ["0", "none", "null", ""]:
+        try:
+            st.image(image_url.strip(), use_container_width=True)
+        except Exception:
+            st.warning("Quiz image could not be loaded.")
 
     st.markdown(f"### {quiz['question_text']}")
 
