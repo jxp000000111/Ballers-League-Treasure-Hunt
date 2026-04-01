@@ -75,17 +75,7 @@ def get_all_team_states():
     )
     return res.data or []
 
-def get_start_gate(team_name: str):
-    res = (
-        supabase.table("th_start_gate")
-        .select("*")
-        .eq("team_name", team_name)
-        .eq("is_active", True)
-        .limit(1)
-        .execute()
-    )
-    return res.data[0] if res.data else None
-    
+
 def get_clue_for_team(team_name: str, tier: int):
     res = (
         supabase.table("th_clues")
@@ -219,6 +209,18 @@ def verify_pin(team_name: str, tier: int, entered_pin: str):
     return False, "Wrong pin. Try again."
 
 
+def get_start_gate(team_name: str):
+    res = (
+        supabase.table("th_start_gate")
+        .select("*")
+        .eq("team_name", team_name)
+        .eq("is_active", True)
+        .limit(1)
+        .execute()
+    )
+    return res.data[0] if res.data else None
+
+
 def get_hunt_timing(team_name: str):
     res = (
         supabase.table("th_hunt_timing")
@@ -279,7 +281,7 @@ def mark_tier_completed(team_name: str, tier: int):
 
 
 def get_timing_summary():
-    res = supabase.table("th_team_timing_summary").select("*").execute()
+    res = supabase.table("th_team_adjusted_timing_summary").select("*").execute()
     return res.data or []
 
 
@@ -514,7 +516,7 @@ st.markdown(
 
     .leader-row {
         display: grid;
-        grid-template-columns: 60px 1.2fr 80px 110px 90px 90px 90px 90px 90px 90px 180px;
+        grid-template-columns: 60px 1.2fr 80px 110px 90px 90px 90px 90px 90px 110px 180px;
         gap: 10px;
         align-items: center;
         padding: 0.9rem 0.2rem;
@@ -596,7 +598,7 @@ if st.session_state.page_mode == "leaderboard":
     st.markdown('<div class="premium-card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">Treasure Hunt Leaderboard</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="muted-text">Shows each tier timing and the team average timing across solved tiers.</div>',
+        '<div class="muted-text">Ranked by highest tier first, then lowest median-adjusted total time (cap = median + 90s per tier), then earliest finish time.</div>',
         unsafe_allow_html=True
     )
 
@@ -604,7 +606,7 @@ if st.session_state.page_mode == "leaderboard":
         team_states,
         key=lambda x: (
             -int(x.get("current_tier", 1)),
-            int(timing_map.get(x["team_name"], {}).get("avg_tier_seconds", 10**9) or 10**9),
+            int(timing_map.get(x["team_name"], {}).get("total_adjusted_seconds", 10**9) or 10**9),
             str(x.get("finished_at") or "9999-12-31T23:59:59+00:00")
         )
     )
@@ -621,7 +623,7 @@ if st.session_state.page_mode == "leaderboard":
             <div>T3</div>
             <div>T4</div>
             <div>T5</div>
-            <div>Avg</div>
+            <div>Avg Adj</div>
             <div>Finished At</div>
         </div>
         """,
@@ -637,12 +639,12 @@ if st.session_state.page_mode == "leaderboard":
         finished_at = row.get("finished_at")
 
         team_timing = timing_map.get(team_name, {})
-        t1 = format_seconds(team_timing.get("tier_1_seconds"))
-        t2 = format_seconds(team_timing.get("tier_2_seconds"))
-        t3 = format_seconds(team_timing.get("tier_3_seconds"))
-        t4 = format_seconds(team_timing.get("tier_4_seconds"))
-        t5 = format_seconds(team_timing.get("tier_5_seconds"))
-        avg_t = format_seconds(team_timing.get("avg_tier_seconds"))
+        t1 = format_seconds(team_timing.get("tier_1_adjusted"))
+        t2 = format_seconds(team_timing.get("tier_2_adjusted"))
+        t3 = format_seconds(team_timing.get("tier_3_adjusted"))
+        t4 = format_seconds(team_timing.get("tier_4_adjusted"))
+        t5 = format_seconds(team_timing.get("tier_5_adjusted"))
+        avg_t = format_seconds(team_timing.get("avg_adjusted_seconds"))
 
         if finished_at:
             dt_utc = datetime.fromisoformat(finished_at.replace("Z", "+00:00"))
@@ -684,7 +686,7 @@ if not st.session_state.show_clue:
             <li>Solve each clue and enter its 4-digit code.</li>
             <li>Answer the football quiz to complete that tier.</li>
             <li>Each completed tier saves a timestamp.</li>
-            <li>The leaderboard shows individual tier timings and your average timing.</li>
+            <li>Leaderboard uses median-adjusted tier timings with a 90-second cap buffer.</li>
         </ol>
         <div class="footer-note"><strong>Good luck hunting those extra points.</strong></div>
         """,
@@ -777,12 +779,12 @@ if not hunt_started:
     start_gate = get_start_gate(selected_team)
 
     if not start_gate:
-        st.error("No active start question found in th_start_gate.")
+        st.error("No active team-wise start question found in th_start_gate.")
         st.stop()
 
     st.markdown('<div class="premium-card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">Start Gate</div>', unsafe_allow_html=True)
-    st.markdown('<div class="muted-text">Answer correctly to begin your official hunt timer.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="muted-text">Answer correctly to begin your official timer.</div>', unsafe_allow_html=True)
 
     image_url = start_gate.get("image_url")
     if image_url and isinstance(image_url, str) and image_url.strip().lower() not in ["0", "none", "null", ""]:
@@ -814,12 +816,12 @@ if not hunt_started:
 
 team_timing = timing_map.get(selected_team, {})
 st.caption(
-    f"T1: {format_seconds(team_timing.get('tier_1_seconds'))} | "
-    f"T2: {format_seconds(team_timing.get('tier_2_seconds'))} | "
-    f"T3: {format_seconds(team_timing.get('tier_3_seconds'))} | "
-    f"T4: {format_seconds(team_timing.get('tier_4_seconds'))} | "
-    f"T5: {format_seconds(team_timing.get('tier_5_seconds'))} | "
-    f"Avg: {format_seconds(team_timing.get('avg_tier_seconds'))}"
+    f"T1: {format_seconds(team_timing.get('tier_1_adjusted'))} | "
+    f"T2: {format_seconds(team_timing.get('tier_2_adjusted'))} | "
+    f"T3: {format_seconds(team_timing.get('tier_3_adjusted'))} | "
+    f"T4: {format_seconds(team_timing.get('tier_4_adjusted'))} | "
+    f"T5: {format_seconds(team_timing.get('tier_5_adjusted'))} | "
+    f"Avg Adj: {format_seconds(team_timing.get('avg_adjusted_seconds'))}"
 )
 
 clue = get_clue_for_team(selected_team, current_tier)
