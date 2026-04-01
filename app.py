@@ -75,7 +75,17 @@ def get_all_team_states():
     )
     return res.data or []
 
-
+def get_start_gate(team_name: str):
+    res = (
+        supabase.table("th_start_gate")
+        .select("*")
+        .eq("team_name", team_name)
+        .eq("is_active", True)
+        .limit(1)
+        .execute()
+    )
+    return res.data[0] if res.data else None
+    
 def get_clue_for_team(team_name: str, tier: int):
     res = (
         supabase.table("th_clues")
@@ -207,17 +217,6 @@ def verify_pin(team_name: str, tier: int, entered_pin: str):
         unlock_quiz_for_tier(team_name, tier)
         return True, "Correct pin. Quiz unlocked."
     return False, "Wrong pin. Try again."
-
-
-def get_start_gate():
-    res = (
-        supabase.table("th_start_gate")
-        .select("*")
-        .eq("is_active", True)
-        .limit(1)
-        .execute()
-    )
-    return res.data[0] if res.data else None
 
 
 def get_hunt_timing(team_name: str):
@@ -775,7 +774,7 @@ if is_finished:
     st.stop()
 
 if not hunt_started:
-    start_gate = get_start_gate()
+    start_gate = get_start_gate(selected_team)
 
     if not start_gate:
         st.error("No active start question found in th_start_gate.")
