@@ -717,11 +717,11 @@ if not st.session_state.show_clue:
         """
         <ol>
             <li>Select your team.</li>
-            <li>Solve the start question to begin your official timer.</li>
-            <li>Solve each clue and enter its 4-digit code.</li>
-            <li>Answer the football quiz to complete that tier.</li>
-            <li>Each completed tier saves a timestamp.</li>
-            <li>Final leaderboard uses average adjusted tier time and is visible only to admin.</li>
+            <li>Solve the start question with admin-given code to begin your official timer.</li>
+            <li>Solve each clue, identify the location and enter the 4-digit code you get from the location.</li>
+            <li>If right, it will lead you to a football quiz question. Answer the football quiz to complete that tier.</li>
+            <li>Each completed tier saves a timestamp and the time lost in league matches are adjusted accordingly.</li>
+            <li>Final leaderboard is visible only to admin and results will be announced later.</li>
         </ol>
         <div class="footer-note"><strong>Good luck hunting those extra points.</strong></div>
         """,
