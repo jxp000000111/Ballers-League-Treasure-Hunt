@@ -297,6 +297,8 @@ if "show_clue" not in st.session_state:
     st.session_state.show_clue = False
 if "page_mode" not in st.session_state:
     st.session_state.page_mode = "play"
+if "leaderboard_admin_ok" not in st.session_state:
+    st.session_state.leaderboard_admin_ok = False
 
 st.markdown(
     """
@@ -590,15 +592,48 @@ with nav1:
         st.session_state.page_mode = "play"
         st.rerun()
 with nav2:
-    if st.button("Leaderboard", use_container_width=True):
+    if st.button("Admin Leaderboard", use_container_width=True):
         st.session_state.page_mode = "leaderboard"
         st.rerun()
 
 if st.session_state.page_mode == "leaderboard":
+    ADMIN_PIN = st.secrets["LEADERBOARD_ADMIN_PIN"]
+
+    if not st.session_state.leaderboard_admin_ok:
+        st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Admin Leaderboard Access</div>', unsafe_allow_html=True)
+        st.markdown('<div class="muted-text">Enter the admin PIN to view leaderboard timings.</div>', unsafe_allow_html=True)
+
+        admin_pin_input = st.text_input("Enter admin PIN", type="password", key="leaderboard_pin_input")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Unlock Leaderboard", use_container_width=True):
+                if admin_pin_input == ADMIN_PIN:
+                    st.session_state.leaderboard_admin_ok = True
+                    st.rerun()
+                else:
+                    st.error("Wrong PIN.")
+        with col2:
+            if st.button("Back to Play", use_container_width=True):
+                st.session_state.page_mode = "play"
+                st.rerun()
+
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.stop()
+
+    top_a, top_b = st.columns([4, 1])
+    with top_a:
+        st.markdown('<div class="section-title">Treasure Hunt Leaderboard</div>', unsafe_allow_html=True)
+    with top_b:
+        if st.button("Lock", use_container_width=True):
+            st.session_state.leaderboard_admin_ok = False
+            st.session_state.page_mode = "play"
+            st.rerun()
+
     st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">Treasure Hunt Leaderboard</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="muted-text">Ranked by highest tier first, then lowest median-adjusted total time (cap = median + 90s per tier), then earliest finish time.</div>',
+        '<div class="muted-text">Ranked by highest tier first, then lowest average adjusted tier time, then earliest finish time.</div>',
         unsafe_allow_html=True
     )
 
@@ -606,7 +641,7 @@ if st.session_state.page_mode == "leaderboard":
         team_states,
         key=lambda x: (
             -int(x.get("current_tier", 1)),
-            int(timing_map.get(x["team_name"], {}).get("total_adjusted_seconds", 10**9) or 10**9),
+            int(timing_map.get(x["team_name"], {}).get("avg_adjusted_seconds", 10**9) or 10**9),
             str(x.get("finished_at") or "9999-12-31T23:59:59+00:00")
         )
     )
@@ -623,7 +658,7 @@ if st.session_state.page_mode == "leaderboard":
             <div>T3</div>
             <div>T4</div>
             <div>T5</div>
-            <div>Avg Adj</div>
+            <div>Final Time</div>
             <div>Finished At</div>
         </div>
         """,
@@ -644,7 +679,7 @@ if st.session_state.page_mode == "leaderboard":
         t3 = format_seconds(team_timing.get("tier_3_adjusted"))
         t4 = format_seconds(team_timing.get("tier_4_adjusted"))
         t5 = format_seconds(team_timing.get("tier_5_adjusted"))
-        avg_t = format_seconds(team_timing.get("avg_adjusted_seconds"))
+        final_time = format_seconds(team_timing.get("avg_adjusted_seconds"))
 
         if finished_at:
             dt_utc = datetime.fromisoformat(finished_at.replace("Z", "+00:00"))
@@ -665,7 +700,7 @@ if st.session_state.page_mode == "leaderboard":
                 <div>{t3}</div>
                 <div>{t4}</div>
                 <div>{t5}</div>
-                <div>{avg_t}</div>
+                <div>{final_time}</div>
                 <div>{finished_at_display}</div>
             </div>
             """,
@@ -686,7 +721,7 @@ if not st.session_state.show_clue:
             <li>Solve each clue and enter its 4-digit code.</li>
             <li>Answer the football quiz to complete that tier.</li>
             <li>Each completed tier saves a timestamp.</li>
-            <li>Leaderboard uses median-adjusted tier timings with a 90-second cap buffer.</li>
+            <li>Final leaderboard uses average adjusted tier time and is visible only to admin.</li>
         </ol>
         <div class="footer-note"><strong>Good luck hunting those extra points.</strong></div>
         """,
@@ -821,7 +856,7 @@ st.caption(
     f"T3: {format_seconds(team_timing.get('tier_3_adjusted'))} | "
     f"T4: {format_seconds(team_timing.get('tier_4_adjusted'))} | "
     f"T5: {format_seconds(team_timing.get('tier_5_adjusted'))} | "
-    f"Avg Adj: {format_seconds(team_timing.get('avg_adjusted_seconds'))}"
+    f"Final Time: {format_seconds(team_timing.get('avg_adjusted_seconds'))}"
 )
 
 clue = get_clue_for_team(selected_team, current_tier)
